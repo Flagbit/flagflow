@@ -175,6 +175,11 @@ gitflow_has_develop_configured() {
 	[ "$develop" != "" ] && git_local_branch_exists "$develop"
 }
 
+gitflow_has_stage_configured() {
+	local stage=$(git config --get gitflow.branch.stage)
+	[ "$stage" != "" ]
+}
+
 gitflow_has_prefixes_configured() {
 	git config --get gitflow.prefix.feature >/dev/null 2>&1     && \
 	git config --get gitflow.prefix.release >/dev/null 2>&1     && \
@@ -186,6 +191,7 @@ gitflow_has_prefixes_configured() {
 gitflow_is_initialized() {
 	gitflow_has_master_configured                    && \
 	gitflow_has_develop_configured                   && \
+	gitflow_has_stage_configured                   	 && \
 	[ "$(git config --get gitflow.branch.master)" !=    \
 	  "$(git config --get gitflow.branch.develop)" ] && \
 	gitflow_has_prefixes_configured
@@ -196,6 +202,7 @@ gitflow_load_settings() {
 	export DOT_GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
 	export MASTER_BRANCH=$(git config --get gitflow.branch.master)
 	export DEVELOP_BRANCH=$(git config --get gitflow.branch.develop)
+	export STAGE_BRANCH=$(git config --get gitflow.branch.stage)
 	export ORIGIN=$(git config --get gitflow.origin || echo origin)
 }
 

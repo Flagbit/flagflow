@@ -47,6 +47,7 @@ usage() {
 	echo "usage: git flow feature [list] [-v]"
 	echo "       git flow feature start [-F] <name> [<base>]"
 	echo "       git flow feature finish [-rFkDS] [<name|nameprefix>]"
+	echo "       git flow feature test <name>"
 	echo "       git flow feature publish <name>"
 	echo "       git flow feature track <name>"
 	echo "       git flow feature diff [<name|nameprefix>]"
@@ -342,6 +343,77 @@ cmd_finish() {
 
 	# when no merge conflict is detected, just clean up the feature branch
 	helper_finish_cleanup
+}
+
+cmd_test() {
+	parse_args "$@"
+
+	require_branch "$BRANCH"
+
+	# Use current branch if no name is given
+	if [ "$NAME" = "" ]; then
+		gitflow_use_current_branch_name
+	fi
+
+
+	master_branch=$(git config --get gitflow.branch.master)
+	stage_branch=$(git config --get gitflow.branch.stage)
+
+	
+	# Creation of stage
+	# -------------------
+	# The stage branch possibly does not exist yet.  This is the case when,
+	# in a git init'ed repo with one or more commits, master was picked as the
+	# default production branch and stage was "created".  We should create
+	# the develop branch now in that case (we base it on master, of course)
+	if ! git_local_branch_exists "$stage_branch"; then
+		if git_remote_branch_exists "origin/$stage_branch"; then
+			git_do branch "$stage_branch" "origin/$stage_branch" >/dev/null 2>&1
+		else
+			git_do branch --no-track "$stage_branch" "$master_branch"
+		fi
+	fi
+
+	# We always fetch the Branch from Origin
+	# This is done to avoid possible commits on the remote that are not
+	# merged into the local branch
+	if git_remote_branch_exists "$ORIGIN/$BRANCH"; then
+		git_fetch_branch "$ORIGIN" "$NAME"
+	fi
+
+	if git_remote_branch_exists "$ORIGIN/$stage_branch"; then
+		git_fetch_branch "$ORIGIN" "$stage_branch"
+	fi
+
+	# Check if the local branches have all the commits from the remote branches
+	if git_remote_branch_exists "$ORIGIN/$BRANCH"; then
+			require_branches_equal "$BRANCH" "$ORIGIN/$BRANCH"
+	fi
+	if git_remote_branch_exists "$ORIGIN/$stage_branch"; then
+		require_branches_equal "$stage_branch" "$ORIGIN/$stage_branch"
+	fi
+
+	# Merge into BASE
+	git_do checkout "$stage_branch" || die "Could not check out branch '$stage_branch'."
+	
+	git_do merge --no-ff "$BRANCH"
+
+	if git_remote_branch_exists "$ORIGIN/$stage_branch"; then
+		git_do push -u "$ORIGIN" "$stage_branch:$stage_branch"
+	fi
+
+	git_do checkout "$BRANCH" || die "Could not check out branch '$BRANCH'."
+
+	echo
+	echo "Summary of actions:"
+	echo "- Merged branch '$BRANCH' into '$stage_branch'"
+	echo "- Pushed branch '$BASE_BRANCH' to origin"
+	echo "- You are now on branch '$(git_current_branch)'"
+	echo ""
+	echo "Continue with your feature and then type:"
+	echo ""
+	echo "     git flow feature finish $NAME"
+	echo
 }
 
 helper_finish_cleanup() {
