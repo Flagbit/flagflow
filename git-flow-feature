@@ -347,6 +347,7 @@ cmd_finish() {
 
 cmd_test() {
 	parse_args "$@"
+	expand_nameprefix_arg_or_current
 
 	require_branch "$BRANCH"
 
