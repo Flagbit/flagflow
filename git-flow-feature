@@ -451,7 +451,8 @@ helper_finish_cleanup() {
 
 cmd_publish() {
 	parse_args "$@"
-	expand_nameprefix_arg
+
+	expand_nameprefix_arg_or_current
 
 	# sanity checks
 	require_clean_working_tree
@@ -478,7 +479,8 @@ cmd_publish() {
 
 cmd_track() {
 	parse_args "$@"
-	require_name_arg
+
+	expand_nameprefix_arg_or_current
 
 	# sanity checks
 	require_clean_working_tree
